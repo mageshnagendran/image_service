@@ -4,9 +4,9 @@ const express = require('express');
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const quotes = require('./services/quotes');
-
+const cors = require('cors')
 var app = express();
-
+app.use(cors())
 // Use our env vars for setting credentials. 
 // Remove lines 11-14 if using ~/.aws/credentials file on a local server.
 aws.config.update({
@@ -63,9 +63,14 @@ app.post('/upload', function (request, response, next) {
 
       console.log('File uploaded successfully.');
       const data = request.files;
-      // console.log(data);
+      //console.log(request.files);
       quotes.create(request.files);
-      response.json(data);
+      //response.json(data[0]['location']);
+      response.json({
+        "uploaded": 1,
+        "fileName": request.files[0]['originalname'],
+        "url": data[0]['location']
+      });
     });
   } catch (error) {
     console.error(error);
