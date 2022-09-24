@@ -2,37 +2,42 @@
 const aws = require('aws-sdk');
 const express = require('express');
 const multer = require('multer');
-const multerS3 = require('multer-s3');
+const multerS3 = require('multer-s3-transform');
 const quotes = require('./services/quotes');
-const cors = require('cors')
+const cors = require('cors');
+const sharp = require("sharp");
+require('dotenv').config()
+
 var app = express();
 app.use(cors())
+
 // Use our env vars for setting credentials. 
 // Remove lines 11-14 if using ~/.aws/credentials file on a local server.
 aws.config.update({
-    accessKeyId: process.env.aws_access_key_id,
-    secretAccessKey: process.env.aws_secret_access_key
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 });
 
 // Set S3 endpoint to DigitalOcean Spaces
-const spacesEndpoint = new aws.Endpoint('sgp1.digitaloceanspaces.com');
+const spacesEndpoint = new aws.Endpoint(process.env.CLOUD_NAME);
 const s3 = new aws.S3({
-  endpoint: spacesEndpoint
+endpoint: spacesEndpoint
 });
 
-// Change bucket property to your Space name
 const upload = multer({
   storage: multerS3({
     s3: s3,
-    bucket: 'avocet',
+    bucket: process.env.BUCKET_NAME,
     acl: 'public-read',
-    key: function (request, file, cb) {
-      console.log("-----------------");
-      console.log(request.body);
-      cb(null, "docs/" + file.originalname);
-    }
+    shouldTransform: true,
+    transforms: [
+      {
+        id: 'original',
+        key: (request, file, cb) => cb(null, new Date().getTime() + '_img.jpg'),
+        transform: (request, file, cb) => cb(null, sharp().jpeg({ quality: 50 }))
+      }
+    ]
   })
-
 }).array('upload', 10);
 
 // Views in public directory
@@ -62,14 +67,14 @@ app.post('/upload', function (request, response, next) {
       }
 
       console.log('File uploaded successfully.');
-      const data = request.files;
+      const data = request.files[0];
       //console.log(request.files);
       quotes.create(request.files);
       //response.json(data[0]['location']);
       response.json({
         "uploaded": 1,
-        "fileName": request.files[0]['originalname'],
-        "url": data[0]['location']
+        "fileName": data['originalname'],
+        "url": data.transforms[0]['location']
       });
     });
   } catch (error) {
