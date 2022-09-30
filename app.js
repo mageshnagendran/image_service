@@ -56,6 +56,16 @@ app.get("/error", function (request, response) {
   response.sendFile(__dirname + '/public/error.html');
 });
 
+/* GET images */
+app.get('/images', async function(req, res, next) {
+  try {
+    res.json(await quotes.getMultiple(req.query.page));
+  } catch (err) {
+    console.error(`Error while getting quotes `, err.message);
+    res.status(err.statusCode || 500).json({'message': err.message});
+  }
+});
+
 app.post('/upload', function (request, response, next) {
 
   try {

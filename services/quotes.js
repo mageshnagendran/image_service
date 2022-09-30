@@ -1,6 +1,22 @@
 const db = require('./db');
 const config = require('../config');
+const helper = require('../helper');
 var async = require('async');
+
+async function getMultiple(page = 1) {
+  const offset = helper.getOffset(page, config.listPerPage);
+  const rows = await db.query(
+    'SELECT id, img_path, img_type, original_name, size, created_at FROM image_upload OFFSET $1 LIMIT $2', 
+    [offset, config.listPerPage]
+  );
+  const data = helper.emptyOrRows(rows);
+  const meta = {page};
+
+  return {
+    data,
+    meta
+  }
+}
 
 function create(datasetArr){
 
@@ -33,5 +49,6 @@ function insertData(item,callback) {
 }
 
 module.exports = {
+  getMultiple,
   create
 }
